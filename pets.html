@@ -11,7 +11,7 @@
 <style>
   :root{
     --paper:#faf5ea; --ink:#4a4640; --soft:#8a8378; --pencil:#e9a90a;
-    --card:#fffdf7; --line:#e5dcc8;
+    --card:#fffdf7; --line:#e5dcc8; --due:#b3541e;
   }
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   body{
@@ -20,7 +20,14 @@
     padding:28px 18px 48px; max-width:560px; margin:0 auto;
   }
   h1{font-size:21px; font-weight:600; letter-spacing:.04em}
-  .sub{color:var(--soft); font-size:13px; margin:6px 0 22px}
+  .sub{color:var(--soft); font-size:13px; margin:6px 0 18px}
+  #today{
+    border:1.5px solid var(--pencil); border-radius:14px; background:#fff8e6;
+    padding:14px 16px; margin-bottom:8px; display:none;
+  }
+  #today .t{font-size:13px; color:#b57f06; font-weight:700; letter-spacing:.1em; margin-bottom:6px}
+  #today ul{list-style:none; font-size:15px; line-height:1.85}
+  #today .done{font-size:14px; color:var(--soft)}
   h2{font-size:14px; color:var(--soft); letter-spacing:.12em; margin:24px 0 10px; font-weight:600}
   .card{
     background:var(--card); border:1.5px solid var(--line); border-radius:14px;
@@ -36,8 +43,9 @@
     font:inherit; font-size:14px; padding:9px 0; border-radius:999px; cursor:pointer;
   }
   .act button:active{background:var(--ink); color:var(--paper)}
-  .act .last{font-size:11.5px; color:var(--soft); text-align:center; margin-top:5px; min-height:15px}
+  .act .last{font-size:11.5px; color:var(--soft); text-align:center; margin-top:5px; min-height:15px; line-height:1.5}
   .act .last.today{color:#b57f06; font-weight:600}
+  .act .last.over{color:var(--due); font-weight:700}
   footer{margin-top:30px; text-align:center; color:var(--soft); font-size:12px; line-height:1.9}
   footer .pen{color:var(--pencil)}
 </style>
@@ -45,52 +53,91 @@
 <body>
   <h1>水槽とペットの記録帳</h1>
   <p class="sub">ボタンを押すと、その日の記録が残ります。記録はこの端末の中に保存されます。</p>
+  <div id="today"><div class="t">今日やること</div><div id="today-body"></div></div>
   <div id="list"></div>
   <footer><span class="pen">✎</span> OTHER の記録帳</footer>
 
 <script>
+  // days: そのお世話の間隔（日数）。なしは記録だけ。
   var ENTRIES = [
     { group:"水槽", items:[
-      { id:"shima",  name:"シマさん",        note:"ティラピア・単独水槽", actions:["餌","水換え"] },
-      { id:"guppy",  name:"グッピーボトル",   note:"ボトル水槽",           actions:["餌","水換え"] },
-      { id:"small",  name:"小さい熱帯魚水槽", note:"",                     actions:["餌","水換え"] },
-      { id:"jet",    name:"ジェットエアプレーン", note:"赤い金魚・Haru の金魚", actions:["餌","水換え"] },
-      { id:"penta",  name:"ペンタゴン",       note:"エレファントノーズ（イルカマン）", actions:["餌","水換え"] },
-      { id:"nimo",   name:"ニモ",             note:"クマノミ・海水水槽",   actions:["餌","水換え"] }
+      { id:"shima",  name:"シマさん",        note:"ティラピア・単独水槽", actions:[["餌",1],["水換え",0]] },
+      { id:"guppy",  name:"グッピーボトル",   note:"ボトル水槽",           actions:[["餌",1],["水換え",0]] },
+      { id:"small",  name:"小さい熱帯魚水槽", note:"",                     actions:[["餌",1],["水換え",0]] },
+      { id:"jet",    name:"ジェットエアプレーン", note:"赤い金魚・Haru の金魚", actions:[["餌",1],["水換え",0]] },
+      { id:"penta",  name:"ペンタゴン",       note:"エレファントノーズ（イルカマン）", actions:[["餌",1],["水換え",0]] },
+      { id:"nimo",   name:"ニモ",             note:"クマノミ・海水水槽",   actions:[["餌",1],["水換え",0]] }
     ]},
     { group:"ペット", items:[
-      { id:"ruty",    name:"Ruty",     note:"スキニーギニアピッグ",     actions:["餌","元気チェック"] },
-      { id:"wasabi",  name:"ワサビ",   note:"アカメカブトトカゲ",       actions:["餌","元気チェック"] },
-      { id:"gyoza",   name:"ギョウザ", note:"クレステッドゲッコー",     actions:["餌","元気チェック"] },
-      { id:"lime",    name:"ライム",   note:"ツノガエル",               actions:["餌","元気チェック"] },
-      { id:"holmes",  name:"ホームズ", note:"イモリ",                   actions:["餌","元気チェック"] },
-      { id:"chibi",   name:"ちびまる", note:"ハムスター",               actions:["餌","元気チェック"] },
-      { id:"monyo",   name:"もにょ",   note:"ハムスター",               actions:["餌","元気チェック"] }
+      { id:"ruty",    name:"Ruty",     note:"スキニーギニアピッグ",     actions:[["餌",1],["元気チェック",0]] },
+      { id:"wasabi",  name:"ワサビ",   note:"アカメカブトトカゲ",       actions:[["餌",0],["元気チェック",0]] },
+      { id:"gyoza",   name:"ギョウザ", note:"クレステッドゲッコー",     actions:[["餌",3],["元気チェック",0]] },
+      { id:"lime",    name:"ライム",   note:"ツノガエル",               actions:[["餌",7],["元気チェック",0]] },
+      { id:"holmes",  name:"ホームズ", note:"イモリ",                   actions:[["餌",7],["元気チェック",0]] },
+      { id:"chibi",   name:"ちびまる", note:"ハムスター",               actions:[["餌",0],["元気チェック",7]] },
+      { id:"monyo",   name:"もにょ",   note:"ハムスター",               actions:[["餌",0],["元気チェック",7]] }
+    ]},
+    { group:"植物", items:[
+      { id:"plants",  name:"植物たち", note:"棚の植物・盆栽・吊り下げ", actions:[["水やり",3]] }
     ]}
   ];
   var KEY = "pets-log-v1";
   var store = {};
   try { store = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch(e) { store = {}; }
 
-  function fmt(iso){
+  function dayNum(d){ return Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000); }
+  function statusOf(iso, days){
+    if(!days) return null;
+    if(!iso) return { kind:"due", text: days === 1 ? "今日の分" : "まだ記録なし" };
+    var diff = dayNum(new Date()) - dayNum(new Date(iso));
+    if(days === 1){
+      if(diff === 0) return { kind:"ok", text:"今日は記録済み" };
+      return { kind:"due", text:"今日の分" };
+    }
+    if(diff >= days) return { kind:"over", text:"前のから " + diff + " 日（" + days + "日に1回）" };
+    if(diff === 0) return { kind:"ok", text:"次は " + days + " 日後" };
+    return { kind:"ok", text:"次は " + (days - diff) + " 日後" };
+  }
+  function fmtLast(iso){
     if(!iso) return "まだ記録なし";
     var d = new Date(iso), now = new Date();
-    var day = function(x){ return x.getFullYear()+"-"+x.getMonth()+"-"+x.getDate(); };
-    var yest = new Date(now); yest.setDate(now.getDate()-1);
+    var sameDay = dayNum(d) === dayNum(now);
+    var yest = dayNum(now) - dayNum(d) === 1;
     var hm = ("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2);
-    if(day(d) === day(now))  return { text:"今日 "+hm, today:true };
-    if(day(d) === day(yest)) return { text:"昨日 "+hm, today:false };
+    if(sameDay) return { text:"今日 "+hm, today:true };
+    if(yest) return { text:"昨日 "+hm, today:false };
     return { text:(d.getMonth()+1)+"/"+d.getDate()+" "+hm, today:false };
   }
   function save(){ try { localStorage.setItem(KEY, JSON.stringify(store)); } catch(e){} }
-  function stamp(id, action, el){
-    store[id+"|"+action] = new Date().toISOString();
-    save(); renderLast(id, action, el);
+
+  var lastEls = {};  // "id|action" -> element
+  function renderLast(id, action, days){
+    var el = lastEls[id+"|"+action]; if(!el) return;
+    var iso = store[id+"|"+action];
+    var f = fmtLast(iso);
+    var st = statusOf(iso, days);
+    var html = "前回：" + f.text;
+    if(st && st.kind !== "ok") html += "<br>" + st.text;
+    if(st && st.kind === "ok") html += "・" + st.text;
+    el.innerHTML = html;
+    el.className = "last" + (st && st.kind === "over" ? " over" : (st && st.kind === "due" ? " over" : (f.today ? " today" : "")));
   }
-  function renderLast(id, action, el){
-    var f = fmt(store[id+"|"+action]);
-    el.textContent = "前回：" + f.text;
-    el.className = "last" + (f.today ? " today" : "");
+  function renderToday(){
+    var due = [];
+    ENTRIES.forEach(function(g){ g.items.forEach(function(it){
+      it.actions.forEach(function(a){
+        var st = statusOf(store[it.id+"|"+a[0]], a[1]);
+        if(st && (st.kind === "due" || st.kind === "over")) due.push(it.name + "の" + a[0]);
+      });
+    });});
+    var box = document.getElementById("today"), body = document.getElementById("today-body");
+    box.style.display = "block";
+    if(due.length === 0){ body.innerHTML = '<div class="done">今日の分は全部終わってるよ。</div>'; }
+    else {
+      var ul = document.createElement("ul");
+      due.forEach(function(t){ var li = document.createElement("li"); li.textContent = "・" + t; ul.appendChild(li); });
+      body.innerHTML = ""; body.appendChild(ul);
+    }
   }
 
   var list = document.getElementById("list");
@@ -101,18 +148,24 @@
       var nm = document.createElement("div"); nm.className = "name"; nm.textContent = it.name; card.appendChild(nm);
       if(it.note){ var nt = document.createElement("div"); nt.className = "note"; nt.textContent = it.note; card.appendChild(nt); }
       var row = document.createElement("div"); row.className = "row";
-      it.actions.forEach(function(action){
+      it.actions.forEach(function(a){
+        var action = a[0], days = a[1];
         var wrap = document.createElement("div"); wrap.className = "act";
         var btn = document.createElement("button"); btn.textContent = action;
         var last = document.createElement("div");
-        btn.addEventListener("click", function(){ stamp(it.id, action, last); });
+        lastEls[it.id+"|"+action] = last;
+        btn.addEventListener("click", function(){
+          store[it.id+"|"+action] = new Date().toISOString();
+          save(); renderLast(it.id, action, days); renderToday();
+        });
         wrap.appendChild(btn); wrap.appendChild(last); row.appendChild(wrap);
-        renderLast(it.id, action, last);
+        renderLast(it.id, action, days);
       });
       card.appendChild(row);
       list.appendChild(card);
     });
   });
+  renderToday();
 </script>
 </body>
 </html>
