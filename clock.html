@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>記録する時計 — other</title>
+<style>
+  :root{
+    --paper:#faf5ea;
+    --pencil:#4a4640;
+    --pencil-light:#a39c8d;
+    --yellow:#e9a90a;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    background:var(--paper);
+    color:var(--pencil);
+    font-family:"Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:24px 16px 32px;
+  }
+  h1{
+    font-size:15px;
+    font-weight:600;
+    letter-spacing:.35em;
+    margin-bottom:4px;
+  }
+  .concept{
+    font-size:12px;
+    color:var(--pencil-light);
+    letter-spacing:.12em;
+    margin-bottom:14px;
+  }
+  canvas{
+    width:min(78vw,380px);
+    height:min(78vw,380px);
+    display:block;
+  }
+  .digital{
+    font-family:Georgia,"Hiragino Mincho ProN","Yu Mincho",serif;
+    font-size:34px;
+    letter-spacing:.14em;
+    margin-top:10px;
+  }
+  .date{
+    font-size:13px;
+    color:var(--pencil-light);
+    letter-spacing:.2em;
+    margin-top:6px;
+  }
+  .record{
+    margin-top:18px;
+    font-size:13px;
+    letter-spacing:.08em;
+    border-top:1px solid #e3dac6;
+    padding-top:14px;
+    text-align:center;
+    line-height:1.9;
+  }
+  .record b{color:var(--yellow);font-weight:700;}
+  footer{
+    margin-top:22px;
+    font-size:11px;
+    color:var(--pencil-light);
+    letter-spacing:.25em;
+  }
+</style>
+</head>
+<body>
+  <h1>記録する時計</h1>
+  <p class="concept">測るためじゃなく、残すための時計</p>
+  <canvas id="face" width="760" height="760"></canvas>
+  <div class="digital" id="digital">--:--:--</div>
+  <div class="date" id="date"></div>
+  <div class="record" id="record"></div>
+  <footer>OTHER の時計</footer>
+
+<script>
+(function(){
+  var cv = document.getElementById('face');
+  var ctx = cv.getContext('2d');
+  var W = 760, C = W/2, R = 300;
+
+  // 手描きのゆらぎ（種を固定して、毎回同じ絵にする）
+  var seed = 718;
+  function rnd(){
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  }
+  var wobble = [];
+  for (var i = 0; i < 180; i++) wobble.push((rnd() - 0.5) * 5);
+
+  function rimPath(r){
+    ctx.beginPath();
+    for (var i = 0; i <= 180; i++){
+      var a = (i / 180) * Math.PI * 2;
+      var rr = r + wobble[i % 180];
+      var x = C + Math.cos(a) * rr, y = C + Math.sin(a) * rr;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+  }
+  function strokeRim(r, alpha, width, dx, dy){
+    ctx.save();
+    ctx.translate(dx || 0, dy || 0);
+    rimPath(r);
+    ctx.strokeStyle = 'rgba(74,70,64,' + alpha + ')';
+    ctx.lineWidth = width;
+    ctx.stroke();
+    ctx.restore();
+  }
+  function polar(a, r){
+    return [C + Math.cos(a) * r, C + Math.sin(a) * r];
+  }
+  function line(a, r1, r2, color, width){
+    var p1 = polar(a, r1), p2 = polar(a, r2);
+    ctx.beginPath();
+    ctx.moveTo(p1[0], p1[1]);
+    ctx.lineTo(p2[0], p2[1]);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  }
+
+  var week = ['日','月','火','水','木','金','土'];
+
+  function draw(){
+    var now = new Date();
+    var h = now.getHours(), m = now.getMinutes(),
+        s = now.getSeconds() + now.getMilliseconds() / 1000;
+
+    ctx.clearRect(0, 0, W, W);
+
+    // 記録リング：この1時間の「分」が、過ぎた分だけ残る
+    for (var i = 0; i < 60; i++){
+      var a = (i / 60) * Math.PI * 2 - Math.PI / 2;
+      var p = polar(a, R + 42);
+      ctx.beginPath();
+      if (i < m){
+        ctx.arc(p[0], p[1], 5, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(74,70,64,0.75)';
+        ctx.fill();
+      } else if (i === m){
+        ctx.arc(p[0], p[1], 7, 0, Math.PI * 2);
+        ctx.fillStyle = '#e9a90a';
+        ctx.fill();
+      } else {
+        ctx.arc(p[0], p[1], 3.2, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(163,156,141,0.8)';
+        ctx.lineWidth = 1.4;
+        ctx.stroke();
+      }
+    }
+
+    // 文字盤（鉛筆で二度なぞり）
+    strokeRim(R, 0.85, 3.2, 0, 0);
+    strokeRim(R, 0.28, 2.0, 1.6, 1.2);
+    strokeRim(R - 16, 0.30, 1.4, 0, 0);
+
+    // 目盛り
+    for (var t = 0; t < 60; t++){
+      var ta = (t / 60) * Math.PI * 2;
+      if (t % 5 === 0){
+        line(ta, R - 44, R - 22, 'rgba(74,70,64,0.9)', 5);
+      } else {
+        line(ta, R - 32, R - 22, 'rgba(163,156,141,0.55)', 2);
+      }
+    }
+    // 数字は 12・3・6・9 だけ
+    ctx.fillStyle = 'rgba(74,70,64,0.92)';
+    ctx.font = '54px Georgia, "Hiragino Mincho ProN", serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    var nums = [[12, -Math.PI/2], [3, 0], [6, Math.PI/2], [9, Math.PI]];
+    for (var n = 0; n < nums.length; n++){
+      var np = polar(nums[n][1], R - 82);
+      ctx.fillText(String(nums[n][0]), np[0], np[1] + 2);
+    }
+
+    // 針
+    var ha = ((h % 12) + m / 60) / 12 * Math.PI * 2 - Math.PI / 2;
+    var ma = (m + s / 60) / 60 * Math.PI * 2 - Math.PI / 2;
+    var sa = s / 60 * Math.PI * 2 - Math.PI / 2;
+    line(ha, -26, R * 0.50, '#4a4640', 13);
+    line(ha, -26, R * 0.50, 'rgba(74,70,64,0.35)', 5);
+    line(ma, -30, R * 0.74, '#4a4640', 9);
+    line(ma, -30, R * 0.74, 'rgba(74,70,64,0.35)', 3.4);
+    // 秒針：黄色い鉛筆。後ろに薄い軌跡を残す
+    for (var k = 10; k >= 1; k--){
+      var ta2 = sa - k * 0.022;
+      line(ta2, -44, R * 0.86, 'rgba(233,169,10,' + (0.05 * (11 - k)) + ')', 3.4);
+    }
+    line(sa, -44, R * 0.86, '#e9a90a', 4);
+    // 中心
+    ctx.beginPath();
+    ctx.arc(C, C, 13, 0, Math.PI * 2);
+    ctx.fillStyle = '#e9a90a';
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#4a4640';
+    ctx.stroke();
+
+    // テキスト
+    function pad(x){ return (x < 10 ? '0' : '') + x; }
+    document.getElementById('digital').textContent =
+      pad(h) + ':' + pad(m) + ':' + pad(Math.floor(s));
+    document.getElementById('date').textContent =
+      now.getFullYear() + '年' + (now.getMonth() + 1) + '月' + now.getDate() +
+      '日（' + week[now.getDay()] + '）';
+    document.getElementById('record').innerHTML =
+      '今日の記録 — <b>' + h + '時間' + m + '分</b>が、もう残っている。<br>' +
+      '外側の点は、この1時間の記録。過ぎた分だけ、消えずに残る。';
+
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>
