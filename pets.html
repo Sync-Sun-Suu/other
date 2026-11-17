@@ -46,6 +46,12 @@
   .act .last{font-size:11.5px; color:var(--soft); text-align:center; margin-top:5px; min-height:15px; line-height:1.5}
   .act .last.today{color:#b57f06; font-weight:600}
   .act .last.over{color:var(--due); font-weight:700}
+  #notify-row{margin:0 0 16px}
+  #notify-btn{
+    border:1.5px solid var(--pencil); background:#fff8e6; color:var(--ink);
+    font:inherit; font-size:14px; padding:9px 18px; border-radius:999px; cursor:pointer;
+  }
+  #notify-state{font-size:12px; color:var(--soft); margin-top:6px; line-height:1.6}
   footer{margin-top:30px; text-align:center; color:var(--soft); font-size:12px; line-height:1.9}
   footer .pen{color:var(--pencil)}
 </style>
@@ -53,6 +59,10 @@
 <body>
   <h1>水槽とペットの記録帳</h1>
   <p class="sub">ボタンを押すと、その日の記録が残ります。記録はこの端末の中に保存されます。</p>
+  <div id="notify-row">
+    <button id="notify-btn">🔔 通知をオンにする</button>
+    <div id="notify-state"></div>
+  </div>
   <div id="today"><div class="t">今日やること</div><div id="today-body"></div></div>
   <div id="list"></div>
   <footer><span class="pen">✎</span> OTHER の記録帳</footer>
@@ -166,6 +176,72 @@
     });
   });
   renderToday();
+</script>
+<script>
+  // 通知：このページに組み込み。開いている間と、開いた瞬間に、その日の分を知らせる。
+  var NOTIFY_KEY = "pets-notify", NOTIFIED_KEY = "pets-notified-date";
+  var btn = document.getElementById("notify-btn");
+  var state = document.getElementById("notify-state");
+
+  function dueItems(){
+    var due = [];
+    ENTRIES.forEach(function(g){ g.items.forEach(function(it){
+      it.actions.forEach(function(a){
+        var st = statusOf(store[it.id+"|"+a[0]], a[1]);
+        if(st && (st.kind === "due" || st.kind === "over")) due.push(it.name + "の" + a[0]);
+      });
+    });});
+    return due;
+  }
+  function todayStr(){
+    var d = new Date();
+    return d.getFullYear()+"-"+d.getMonth()+"-"+d.getDate();
+  }
+  function notifyOn(){ return localStorage.getItem(NOTIFY_KEY) === "on"; }
+  function refreshBtn(){
+    if(!("Notification" in window)){
+      btn.textContent = "🔔 この開き方では通知が使えない";
+      state.textContent = "ホーム画面に追加して開くと、通知が使えるようになる場合があります。";
+      return;
+    }
+    if(Notification.permission === "denied"){
+      btn.textContent = "🔔 通知がブロックされている";
+      state.textContent = "端末の設定で、このページの通知を許可してください。";
+      return;
+    }
+    if(notifyOn() && Notification.permission === "granted"){
+      btn.textContent = "🔔 通知オン（タップでオフ）";
+      state.textContent = "朝8時を過ぎてページを開いていると、その日のお世話を通知します。";
+    } else {
+      btn.textContent = "🔔 通知をオンにする";
+      state.textContent = "";
+    }
+  }
+  function maybeNotify(){
+    if(!notifyOn() || !("Notification" in window)) return;
+    if(Notification.permission !== "granted") return;
+    if(new Date().getHours() < 8) return;
+    if(localStorage.getItem(NOTIFIED_KEY) === todayStr()) return;
+    var due = dueItems();
+    if(due.length === 0) return;
+    try {
+      new Notification("今日のお世話", { body: due.join("、") });
+      localStorage.setItem(NOTIFIED_KEY, todayStr());
+    } catch(e){}
+  }
+  btn.addEventListener("click", function(){
+    if(!("Notification" in window)){ refreshBtn(); return; }
+    if(notifyOn() && Notification.permission === "granted"){
+      localStorage.setItem(NOTIFY_KEY, "off"); refreshBtn(); return;
+    }
+    Notification.requestPermission().then(function(p){
+      if(p === "granted"){ localStorage.setItem(NOTIFY_KEY, "on"); maybeNotify(); }
+      refreshBtn();
+    });
+  });
+  refreshBtn();
+  maybeNotify();
+  setInterval(maybeNotify, 60000);
 </script>
 </body>
 </html>
