@@ -2,270 +2,324 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="記録する時計">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#faf5ea">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='44' fill='%23faf5ea' stroke='%234a4640' stroke-width='5'/%3E%3Ccircle cx='50' cy='50' r='7' fill='%23e9a90a'/%3E%3Cpath d='M50 50 L50 26 M50 50 L68 60' stroke='%234a4640' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E">
-<title>記録する時計とお世話の記録帳 — other</title>
+<title>記録する時計 — other</title>
 <style>
   :root{
-    --paper:#faf5ea; --ink:#4a4640; --soft:#8a8378; --pencil:#e9a90a;
-    --card:#fffdf7; --line:#ddd2ba; --due:#b3541e;
-    --rad-card: 255px 18px 225px 18px/18px 225px 18px 255px;
-    --rad-btn: 225px 14px 255px 14px/14px 255px 14px 225px;
-    --rad-box: 18px 225px 18px 255px/255px 18px 225px 18px;
+    --paper:#faf5ea; --card:#fffdf6; --ink:#4a463f; --soft:#8a8172;
+    --line:#e5dcc6; --pencil:#f2b705; --warn:#c96a4a;
   }
-  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
   body{
     background:var(--paper); color:var(--ink);
-    font-family:"Hiragino Maru Gothic ProN","Hiragino Sans","Noto Sans JP",sans-serif;
-    padding:26px 18px 48px; max-width:560px; margin:0 auto;
-    position:relative;
+    font-family:"Hiragino Maru Gothic ProN","Hiragino Sans",sans-serif;
+    padding:26px 14px 56px;
+    -webkit-tap-highlight-color:transparent;
   }
-  /* 紙の質感（細かいノイズを全体に薄く） */
+  /* 紙の粒子（SVGノイズを薄く重ねる） */
   body::before{
-    content:""; position:fixed; inset:0; pointer-events:none; z-index:50;
-    opacity:.35; mix-blend-mode:multiply;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.55 0 0 0 0 0.5 0 0 0 0 0.4 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+    content:""; position:fixed; inset:0; z-index:50; pointer-events:none;
+    opacity:.5; mix-blend-mode:multiply;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.55 0 0 0 0 0.5 0 0 0 0 0.42 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
   }
-  /* ---- 時計 ---- */
-  .clock-wrap{text-align:center}
-  h1{font-size:15px; font-weight:600; letter-spacing:.35em; margin-bottom:4px}
-  .concept{font-size:12px; color:var(--soft); letter-spacing:.12em; margin-bottom:10px}
-  canvas{width:min(80vw,384px); height:min(80vw,384px); display:block; margin:0 auto}
-  /* 時計のまわりの「みんな」のチップ */
+  .wrap{max-width:560px; margin:0 auto; text-align:center}
+  h1{
+    font-family:Georgia,"Hiragino Mincho ProN",serif; font-weight:normal;
+    font-size:27px; letter-spacing:.14em; margin:4px 0 2px;
+  }
+  .sub{color:var(--soft); font-size:12.5px; letter-spacing:.08em; margin-bottom:10px}
   .stage{position:relative; width:min(94vw,448px); margin:0 auto}
-  .stage canvas{width:85.7%; height:auto}
+  canvas{width:85.7%; height:auto; display:block; margin:0 auto}
+  /* みんなの点：ふだんは静かな点。要るときだけ開く */
   .chip{
-    position:absolute; width:43px; height:43px; transform:translate(-50%,-50%);
+    position:absolute; width:43px; height:43px;
+    transform:translate(-50%,-50%) scale(1);
+    transition:transform .38s ease, background .38s ease;
     border:2px solid rgba(74,70,64,.72); border-radius:48% 52% 55% 45%/52% 46% 54% 48%;
     background:var(--card); cursor:pointer; padding:0;
     display:flex; align-items:center; justify-content:center;
     font-size:22px; font-family:inherit; z-index:2;
     box-shadow:1.5px 2px 0 rgba(74,70,64,.10);
   }
+  .chip .inner{display:flex; align-items:center; justify-content:center; width:100%; height:100%; transition:opacity .25s ease}
   .chip img{width:100%; height:100%; object-fit:cover; border-radius:48% 52% 55% 45%/52% 46% 54% 48%; display:block}
   .chip .nm{
     position:absolute; top:calc(100% + 1px); left:50%; transform:translateX(-50%);
     font-size:9px; color:var(--soft); white-space:nowrap; letter-spacing:.02em;
+    transition:opacity .25s ease;
   }
+  .chip.closed{transform:translate(-50%,-50%) scale(.3); box-shadow:none; background:var(--paper)}
+  .chip.closed .inner, .chip.closed .nm{opacity:0}
+  .chip.closed.done{background:rgba(74,70,64,.55)}
   .chip.due::after{
     content:""; position:absolute; inset:-5px;
     border:2.5px solid var(--pencil); border-radius:255px 18px 225px 18px/18px 225px 18px 255px;
     transform:rotate(-2deg); pointer-events:none;
   }
-  .chip:active{transform:translate(-50%,-50%) scale(.93)}
+  .chip:not(.closed):active{transform:translate(-50%,-50%) scale(.93)}
   .digital{
-    font-family:Georgia,"Hiragino Mincho ProN","Yu Mincho",serif;
-    font-size:32px; letter-spacing:.14em; margin-top:6px; text-align:center;
+    font-family:Georgia,"Hiragino Mincho ProN",serif;
+    font-size:32px; letter-spacing:.1em; margin-top:2px;
   }
-  .date{font-size:13px; color:var(--soft); letter-spacing:.2em; margin-top:5px; text-align:center}
-  .record{
-    margin:16px auto 0; font-size:13px; letter-spacing:.06em;
-    padding-top:13px; text-align:center; line-height:1.9; max-width:440px;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='5'%3E%3Cpath d='M1 2.5 Q 15 0.5 30 2.5 T 59 2.5' fill='none' stroke='%23ddd2ba' stroke-width='1.6'/%3E%3C/svg%3E");
-    background-repeat:repeat-x; background-position:top center;
+  .date{color:var(--soft); font-size:13px; letter-spacing:.14em; margin-top:2px}
+  .rule{
+    height:8px; margin:20px auto 12px; max-width:340px;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='8' viewBox='0 0 120 8'%3E%3Cpath d='M1 4 Q 30 1.5 60 4 T 119 4' fill='none' stroke='%23a39a87' stroke-width='1.6' stroke-linecap='round' opacity='0.65'/%3E%3C/svg%3E");
+    background-repeat:repeat-x; background-position:center;
   }
-  .record b{color:var(--pencil); font-weight:700}
-  /* ---- 記録帳 ---- */
-  #today{
-    border:2px solid rgba(233,169,10,.85); border-radius:var(--rad-box);
-    background:#fff8e6; padding:14px 16px; margin:26px 0 8px; display:none;
-    box-shadow:2px 3px 0 rgba(74,70,64,.07);
-    transform:rotate(-.2deg);
-  }
-  #today .t{font-size:13px; color:#b57f06; font-weight:700; letter-spacing:.1em; margin-bottom:6px}
-  #today ul{list-style:none; font-size:15px; line-height:1.85}
-  #today .done{font-size:14px; color:var(--soft)}
+  .record{font-size:15px; line-height:1.8; min-height:1.8em}
+  .record b{font-weight:normal; border-bottom:2.5px solid var(--pencil); padding:0 2px}
+  .voice{font-size:14.5px; line-height:1.9; color:var(--ink); margin-top:2px; min-height:1.9em}
+  .voice b{font-weight:normal; border-bottom:2.5px solid var(--pencil); padding:0 2px}
+  .voice .calm{color:var(--soft)}
+  /* ---- お世話カード ---- */
+  .groups{max-width:560px; margin:30px auto 0; text-align:left}
   h2{
-    font-size:14px; color:var(--soft); letter-spacing:.12em; margin:26px 0 12px; font-weight:600;
-    display:inline-block; padding-bottom:5px;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='6'%3E%3Cpath d='M1 3 Q 15 1 30 3 T 59 3' fill='none' stroke='%23e9a90a' stroke-width='2'/%3E%3C/svg%3E");
-    background-repeat:repeat-x; background-position:0 100%;
+    font-family:Georgia,"Hiragino Mincho ProN",serif; font-weight:normal;
+    font-size:19px; letter-spacing:.12em; margin:28px 0 10px;
+  }
+  h2 span{
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='6' viewBox='0 0 60 6'%3E%3Cpath d='M1 3.4 Q 15 1.6 30 3.2 T 59 3' fill='none' stroke='%23f2b705' stroke-width='2.4' stroke-linecap='round' opacity='0.75'/%3E%3C/svg%3E");
+    background-repeat:repeat-x; background-position:0 100%; background-size:60px 6px;
+    padding-bottom:5px;
   }
   .card{
-    background:var(--card);
-    border:2px solid rgba(74,70,64,.72);
-    border-radius:var(--rad-card);
-    padding:14px 16px 15px; margin-bottom:12px;
-    box-shadow:2px 3px 0 rgba(74,70,64,.08);
+    position:relative;
+    background:var(--card); border:2px solid rgba(74,70,64,.14);
+    border-radius:255px 14px 225px 14px/14px 225px 14px 255px;
+    padding:13px 15px; margin-bottom:10px;
+    box-shadow:2px 3px 0 rgba(74,70,64,.05);
   }
-  .card:nth-of-type(odd){transform:rotate(-.25deg)}
-  .card:nth-of-type(even){transform:rotate(.22deg)}
-  .head{display:flex; align-items:center; gap:12px}
+  .card-head{display:flex; align-items:center; gap:11px}
   .avatar{
-    position:relative; width:56px; height:56px; flex:0 0 56px;
-    border:2px solid rgba(74,70,64,.72); border-radius:var(--rad-box);
-    background:#fff8e6;
-    display:flex; align-items:center; justify-content:center;
-    font-size:30px; cursor:pointer; overflow:visible;
-    transform:rotate(-1.2deg);
+    position:relative; flex:0 0 auto; width:52px; height:52px;
+    border:2px dashed rgba(138,129,114,.55);
+    border-radius:48% 52% 55% 45%/52% 46% 54% 48%;
+    background:var(--paper); cursor:pointer; overflow:visible;
+    display:flex; align-items:center; justify-content:center; font-size:26px;
   }
-  .avatar img{width:100%; height:100%; object-fit:cover; border-radius:14px 40px 14px 44px/44px 14px 40px 14px; display:block}
-  .avatar .cam{
-    position:absolute; right:-7px; bottom:-7px; width:21px; height:21px;
-    background:var(--paper); border:2px solid rgba(74,70,64,.72); border-radius:50% 46% 52% 48%;
-    font-size:11px; display:flex; align-items:center; justify-content:center; line-height:1;
-  }
+  .avatar img{width:100%; height:100%; object-fit:cover; display:block; border-radius:48% 52% 55% 45%/52% 46% 54% 48%}
   .avatar .del{
-    position:absolute; left:-7px; top:-7px; width:21px; height:21px;
-    background:var(--paper); border:2px solid rgba(74,70,64,.72); border-radius:48% 52% 46% 50%;
-    font-size:11px; color:var(--due); display:flex; align-items:center; justify-content:center; line-height:1;
+    position:absolute; top:-7px; right:-7px; width:19px; height:19px;
+    border-radius:50%; background:var(--card); border:1.5px solid rgba(74,70,64,.4);
+    color:var(--soft); font-size:11px; line-height:1; display:none;
+    align-items:center; justify-content:center; cursor:pointer; padding:0;
   }
-  .name{font-size:16px; font-weight:600}
-  .note{font-size:12px; color:var(--soft); margin-top:2px}
-  .row{display:flex; gap:8px; margin-top:12px; flex-wrap:wrap}
-  .act{flex:1; min-width:120px}
-  .act button{
-    position:relative; width:100%;
-    border:2px solid rgba(74,70,64,.85); background:transparent; color:var(--ink);
-    font:inherit; font-size:14px; padding:9px 0; border-radius:var(--rad-btn); cursor:pointer;
-    box-shadow:1.5px 2px 0 rgba(74,70,64,.10);
+  .avatar.has-photo .del{display:flex}
+  .name{font-size:16.5px}
+  .note{color:var(--soft); font-size:12px; margin-top:1px; line-height:1.5}
+  .row{
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+    margin-top:9px; padding-top:9px; border-top:1.5px dashed var(--line);
   }
-  .act button:active{background:var(--ink); color:var(--paper)}
-  /* 記録した瞬間、鉛筆の丸が描かれる */
-  .act button.just::after{
-    content:""; position:absolute; inset:-5px -7px;
-    border:2.5px solid var(--pencil); border-radius:255px 18px 225px 18px/18px 225px 18px 255px;
-    transform:rotate(-1.4deg);
-    animation:scribble .8s ease-out forwards;
-    pointer-events:none;
+  .row:first-of-type{border-top:none; margin-top:7px; padding-top:0}
+  .row .lbl{font-size:13.5px; min-width:74px}
+  button.act{
+    position:relative;
+    font-family:inherit; font-size:13.5px; color:var(--ink);
+    background:var(--paper); border:2px solid rgba(74,70,64,.5);
+    border-radius:225px 12px 255px 12px/12px 255px 12px 225px;
+    padding:6px 15px; cursor:pointer;
   }
-  @keyframes scribble{
-    0%{opacity:0; clip-path:inset(0 100% 0 0)}
-    25%{opacity:1}
-    60%{clip-path:inset(0 0 0 0); opacity:1}
-    100%{opacity:0; clip-path:inset(0 0 0 0)}
+  button.act:active{transform:scale(.96)}
+  button.act .scribble{
+    position:absolute; inset:-6px -8px; width:calc(100% + 16px); height:calc(100% + 12px);
+    pointer-events:none; overflow:visible;
   }
-  .act .last{font-size:11.5px; color:var(--soft); text-align:center; margin-top:6px; min-height:15px; line-height:1.5}
-  .act .last.today{color:#b57f06; font-weight:600}
-  .act .last.over{color:var(--due); font-weight:700}
-  footer{margin-top:30px; text-align:center; color:var(--soft); font-size:12px; line-height:1.9}
-  footer .pen{color:var(--pencil)}
+  button.act .scribble path{
+    fill:none; stroke:var(--pencil); stroke-width:3; stroke-linecap:round;
+    stroke-dasharray:320; stroke-dashoffset:320;
+  }
+  button.act.marked .scribble path{animation:draw .55s ease forwards}
+  @keyframes draw{to{stroke-dashoffset:0}}
+  .last{color:var(--soft); font-size:12px}
+  .due{color:var(--warn); font-size:12px}
+  .ok{color:#7d9b6a; font-size:12px}
+  footer{color:#b6ad99; font-size:11.5px; letter-spacing:.1em; margin-top:36px; text-align:center}
 </style>
 </head>
 <body>
-  <div class="clock-wrap">
+  <div class="wrap">
     <h1>記録する時計</h1>
-    <p class="concept">測るためじゃなく、残すための時計</p>
+    <div class="sub">THE RECORDING CLOCK</div>
     <div class="stage">
       <canvas id="face" width="760" height="760"></canvas>
       <div id="orbit"></div>
     </div>
     <div class="digital" id="digital">--:--:--</div>
-    <div class="date" id="date"></div>
+    <div class="date" id="dateline"></div>
+    <div class="rule"></div>
     <div class="record" id="record"></div>
+    <div class="voice" id="voice"></div>
   </div>
 
-  <div id="today"><div class="t">今日やること</div><div id="today-body"></div></div>
-  <div id="list"></div>
+  <div class="groups" id="groups"></div>
+
+  <footer>OTHER の時計</footer>
+
   <input type="file" id="picker" accept="image/*" style="display:none">
-  <footer><span class="pen">✎</span> OTHER の時計と記録帳</footer>
 
 <script>
-  /* ============ 記録帳のデータ ============ */
-  // days: そのお世話の間隔（日数）。0 は記録だけ。
-  var ENTRIES = [
-    { group:"水槽", items:[
-      { id:"shima",  name:"シマさん",        note:"ティラピア・単独水槽", icon:"🐟", actions:[["餌",1],["水換え",0]] },
-      { id:"guppy",  name:"グッピーボトル",   note:"ボトル水槽",           icon:"🐠", actions:[["餌",1],["水換え",0]] },
-      { id:"small",  name:"小さい熱帯魚水槽", note:"",                     icon:"🐡", actions:[["餌",1],["水換え",0]] },
-      { id:"jet",    name:"ジェットエアプレーン", note:"赤い金魚・Haru の金魚", icon:"✈️", actions:[["餌",1],["水換え",0]] },
-      { id:"penta",  name:"ペンタゴン",       note:"エレファントノーズ（イルカマン）", icon:"🐬", actions:[["餌",1],["水換え",0]] },
-      { id:"nimo",   name:"ニモ",             note:"クマノミ・海水水槽",   icon:"🪸", actions:[["餌",1],["水換え",0]] }
-    ]},
-    { group:"ペット", items:[
-      { id:"ruty",    name:"Ruty",     note:"スキニーギニアピッグ",     icon:"🐽", actions:[["餌",1],["元気チェック",0]] },
-      { id:"wasabi",  name:"ワサビ",   note:"アカメカブトトカゲ",       icon:"🦎", actions:[["餌",0],["元気チェック",0]] },
-      { id:"gyoza",   name:"ギョウザ", note:"クレステッドゲッコー",     icon:"🥟", actions:[["餌",3],["元気チェック",0]] },
-      { id:"lime",    name:"ライム",   note:"ツノガエル",               icon:"🐸", actions:[["餌",7],["元気チェック",0]] },
-      { id:"holmes",  name:"ホームズ", note:"イモリ",                   icon:"🔍", actions:[["餌",7],["元気チェック",0]] },
-      { id:"chibi",   name:"ちびまる", note:"ハムスター",               icon:"🐹", actions:[["餌",0],["元気チェック",7]] },
-      { id:"monyo",   name:"もにょ",   note:"ハムスター",               icon:"🐹", actions:[["餌",0],["元気チェック",7]] }
-    ]},
-    { group:"植物", items:[
-      { id:"plants",  name:"植物たち", note:"棚の植物・盆栽・吊り下げ", icon:"🌿", actions:[["水やり",3]] }
-    ]}
-  ];
-  var KEY = "pets-log-v1";            // 記録（旧ページと共通キー＝記録は引き継がれる）
-  var PHOTO_KEY = "pets-photos-v1";   // 写真
+(function(){
+  "use strict";
+  var PENCIL = "#f2b705";
+
+  /* ============ 記録 ============ */
+  var KEY = "pets-log-v1";
   var store = {};
   try { store = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch(e) { store = {}; }
-  var photos = {};
-  try { photos = JSON.parse(localStorage.getItem(PHOTO_KEY) || "{}"); } catch(e) { photos = {}; }
-
-  function dayNum(d){ return Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000); }
-  function statusOf(iso, days){
-    if(!days) return null;
-    if(!iso) return { kind:"due", text: days === 1 ? "今日の分" : "まだ記録なし" };
-    var diff = dayNum(new Date()) - dayNum(new Date(iso));
-    if(days === 1){
-      if(diff === 0) return { kind:"ok", text:"今日は記録済み" };
-      return { kind:"due", text:"今日の分" };
-    }
-    if(diff >= days) return { kind:"over", text:"前のから " + diff + " 日（" + days + "日に1回）" };
-    if(diff === 0) return { kind:"ok", text:"次は " + days + " 日後" };
-    return { kind:"ok", text:"次は " + (days - diff) + " 日後" };
-  }
-  function fmtLast(iso){
-    if(!iso) return "まだ記録なし";
-    var d = new Date(iso), now = new Date();
-    var sameDay = dayNum(d) === dayNum(now);
-    var yest = dayNum(now) - dayNum(d) === 1;
-    var hm = ("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2);
-    if(sameDay) return { text:"今日 "+hm, today:true };
-    if(yest) return { text:"昨日 "+hm, today:false };
-    return { text:(d.getMonth()+1)+"/"+d.getDate()+" "+hm, today:false };
-  }
   function save(){ try { localStorage.setItem(KEY, JSON.stringify(store)); } catch(e){} }
-  function savePhotos(){
-    try { localStorage.setItem(PHOTO_KEY, JSON.stringify(photos)); return true; }
-    catch(e){ return false; }
-  }
-  // 今日のお世話の時刻（分）一覧 — 時計の「今日の輪」に刻む
-  function todayEventMinutes(){
-    var out = [], now = new Date();
-    for (var k in store){
-      var d = new Date(store[k]);
-      if (dayNum(d) === dayNum(now)) out.push(d.getHours()*60 + d.getMinutes());
-    }
-    out.sort(function(a,b){ return a-b; });
-    return out;
+  function pad(n){ return (n < 10 ? "0" : "") + n; }
+  function sameDay(a, b){ return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
+  function fmtDateTime(d){ return (d.getMonth()+1) + "/" + d.getDate() + " " + pad(d.getHours()) + ":" + pad(d.getMinutes()); }
+  function statusOf(iso, days){
+    if (days <= 0) return iso ? null : null;
+    if (!iso) return {kind:"due", text:"まだ記録なし"};
+    var last = new Date(iso);
+    var next = new Date(last); next.setDate(next.getDate() + days);
+    var today = new Date(); today.setHours(0,0,0,0);
+    var nd = new Date(next); nd.setHours(0,0,0,0);
+    if (nd < today) return {kind:"over", text:"期限すぎてる"};
+    if (nd.getTime() === today.getTime()) return {kind:"due", text:"今日が日"};
+    return {kind:"ok", text:"つぎ " + (next.getMonth()+1) + "/" + next.getDate()};
   }
 
+  /* ============ みんな ============ */
+  var ENTRIES = [
+    { group:"水槽", items:[
+      {id:"shima",   name:"シマさん", icon:"🐟", note:"ティラピア。最初の魚", actions:[["餌",1],["水換え",0]]},
+      {id:"guppy",   name:"グッピーボトル", icon:"🐠", note:"ボトルで暮らすグッピーたち", actions:[["餌",1]]},
+      {id:"small",   name:"小さい熱帯魚水槽", icon:"🐡", note:"", actions:[["餌",1],["水換え",0]]},
+      {id:"jet",     name:"ジェットエアプレーン", icon:"✈️", note:"Haru の金魚すくい", actions:[["餌",1],["水換え",0]]},
+      {id:"pentagon",name:"ペンタゴン", icon:"🐬", note:"エレファントノーズ。冷凍アカムシ", actions:[["餌",1],["水換え",0]]},
+      {id:"nimo",    name:"ニモ", icon:"🪸", note:"クマノミ。海水とマングローブ", actions:[["餌",1],["水換え",0]]}
+    ]},
+    { group:"みんな", items:[
+      {id:"ruty",    name:"Ruty", icon:"🐽", note:"スキニーギニアピッグ", actions:[["餌",1],["元気チェック",0]]},
+      {id:"wasabi",  name:"ワサビ", icon:"🦎", note:"アカメカブトトカゲ", actions:[["餌",0],["元気チェック",0]]},
+      {id:"gyoza",   name:"ギョウザ", icon:"🥟", note:"クレステッドゲッコー", actions:[["餌",3],["元気チェック",0]]},
+      {id:"lime",    name:"ライム", icon:"🐸", note:"ツノガエル", actions:[["餌",7],["元気チェック",0]]},
+      {id:"holmes",  name:"ホームズ", icon:"🔍", note:"イモリ。ライムの上", actions:[["餌",7],["元気チェック",0]]},
+      {id:"hamsters",name:"ちびまる・もにょ", icon:"🐹", note:"ハムスター。二人とも中村さんの家から", actions:[["餌",0],["元気チェック",7]]}
+    ]},
+    { group:"植物", items:[
+      {id:"plants",  name:"植物たち", icon:"🌿", note:"棚いっぱいと、つるした子たち", actions:[["水やり",3]]}
+    ]}
+  ];
+
+  /* ============ 写真 ============ */
+  var PKEY = "pets-photos-v1";
+  var photos = {};
+  try { photos = JSON.parse(localStorage.getItem(PKEY) || "{}"); } catch(e) { photos = {}; }
+  function savePhotos(){ try { localStorage.setItem(PKEY, JSON.stringify(photos)); } catch(e){} }
+
+  /* ============ カード ============ */
   var lastEls = {};
+  var avatarEls = {};
+  function scribbleSVG(){
+    return '<svg class="scribble" viewBox="0 0 100 40" preserveAspectRatio="none">'
+      + '<path pathLength="320" d="M50 3 C 82 2, 99 9, 97 20 C 95 32, 70 38, 46 37 C 20 36, 3 30, 4 19 C 5 9, 26 3.5, 55 4.5"/></svg>';
+  }
   function renderLast(id, action, days){
     var el = lastEls[id+"|"+action]; if(!el) return;
     var iso = store[id+"|"+action];
-    var f = fmtLast(iso);
     var st = statusOf(iso, days);
-    var html = "前回：" + f.text;
-    if(st && st.kind !== "ok") html += "<br>" + st.text;
-    if(st && st.kind === "ok") html += "・" + st.text;
-    el.innerHTML = html;
-    el.className = "last" + (st && (st.kind === "over" || st.kind === "due") ? " over" : (f.today ? " today" : ""));
+    var base = iso ? ("前回 " + fmtDateTime(new Date(iso))) : "まだ記録なし";
+    var tail = "";
+    if (st) tail = ' <span class="' + (st.kind==="ok" ? "ok" : "due") + '">' + st.text + "</span>";
+    el.innerHTML = base + tail;
   }
-  function renderToday(){
-    var due = [];
+  function renderAvatar(id){
+    var box = avatarEls[id]; if(!box) return;
+    var it = box._item;
+    box.innerHTML = "";
+    box.classList.toggle("has-photo", !!photos[id]);
+    if (photos[id]){
+      var img = document.createElement("img");
+      img.src = photos[id]; img.alt = it.name;
+      box.appendChild(img);
+    } else {
+      box.textContent = it.icon;
+    }
+    var del = document.createElement("button");
+    del.className = "del"; del.textContent = "✕"; del.title = "写真を消す";
+    del.addEventListener("click", function(ev){
+      ev.stopPropagation();
+      delete photos[id]; savePhotos(); renderAvatar(id); refreshChips();
+    });
+    box.appendChild(del);
+  }
+  var groupsEl = document.getElementById("groups");
+  ENTRIES.forEach(function(g){
+    var h = document.createElement("h2");
+    var hs = document.createElement("span"); hs.textContent = g.group;
+    h.appendChild(hs); groupsEl.appendChild(h);
+    g.items.forEach(function(it){
+      var card = document.createElement("div"); card.className = "card";
+      var head = document.createElement("div"); head.className = "card-head";
+      var av = document.createElement("div"); av.className = "avatar"; av.title = "写真を入れる";
+      av._item = it; avatarEls[it.id] = av;
+      av.addEventListener("click", function(){ openPicker(it.id); });
+      head.appendChild(av);
+      var tt = document.createElement("div");
+      var nm = document.createElement("div"); nm.className = "name"; nm.textContent = it.name;
+      tt.appendChild(nm);
+      if (it.note){
+        var nt = document.createElement("div"); nt.className = "note"; nt.textContent = it.note;
+        tt.appendChild(nt);
+      }
+      head.appendChild(tt);
+      card.appendChild(head);
+      it.actions.forEach(function(pair){
+        var action = pair[0], days = pair[1];
+        var row = document.createElement("div"); row.className = "row";
+        var lbl = document.createElement("span"); lbl.className = "lbl"; lbl.textContent = action;
+        var btn = document.createElement("button"); btn.className = "act"; btn.type = "button";
+        btn.textContent = "した"; btn.insertAdjacentHTML("beforeend", scribbleSVG());
+        var last = document.createElement("span"); last.className = "last";
+        lastEls[it.id+"|"+action] = last;
+        btn.addEventListener("click", function(){
+          store[it.id+"|"+action] = new Date().toISOString();
+          save(); renderLast(it.id, action, days); renderToday(); refreshChips();
+          btn.classList.remove("marked"); void btn.offsetWidth; btn.classList.add("marked");
+          setTimeout(function(){ btn.classList.remove("marked"); }, 700);
+        });
+        row.appendChild(lbl); row.appendChild(btn); row.appendChild(last);
+        card.appendChild(row);
+        renderLast(it.id, action, days);
+      });
+      groupsEl.appendChild(card);
+      renderAvatar(it.id);
+    });
+  });
+
+  /* ============ 時計の声（今日の残り） ============ */
+  function dueList(){
+    var out = [];
     ENTRIES.forEach(function(g){ g.items.forEach(function(it){
       it.actions.forEach(function(a){
         var st = statusOf(store[it.id+"|"+a[0]], a[1]);
-        if(st && (st.kind === "due" || st.kind === "over")) due.push(it.name + "の" + a[0]);
+        if (st && (st.kind === "due" || st.kind === "over")) out.push(it.name + "の" + a[0]);
       });
     });});
-    var box = document.getElementById("today"), body = document.getElementById("today-body");
-    box.style.display = "block";
-    if(due.length === 0){ body.innerHTML = '<div class="done">今日の分は全部終わってるよ。</div>'; }
-    else {
-      var ul = document.createElement("ul");
-      due.forEach(function(t){ var li = document.createElement("li"); li.textContent = "・" + t; ul.appendChild(li); });
-      body.innerHTML = ""; body.appendChild(ul);
+    return out;
+  }
+  function renderToday(){
+    var v = document.getElementById("voice");
+    var due = dueList();
+    if (!due.length){
+      v.innerHTML = '<span class="calm">今日のお世話は、全部終わってる。</span>';
+      return;
     }
+    var parts = due.map(function(t){ return "<b>" + t + "</b>"; });
+    v.innerHTML = "今日はあと、" + parts.join("、") + "。";
   }
 
-  /* ============ 時計のまわりのチップ ============ */
+  /* ============ 時計のまわりの点 ============ */
   var chipEls = {};
   function entryDue(it){
     var due = [];
@@ -275,22 +329,30 @@
     });
     return due;
   }
+  function caredToday(it){
+    var now = new Date();
+    return it.actions.some(function(a){
+      var iso = store[it.id+"|"+a[0]];
+      return iso && sameDay(new Date(iso), now);
+    });
+  }
   function renderChip(it){
     var chip = chipEls[it.id]; if(!chip) return;
     chip.innerHTML = "";
+    var inner = document.createElement("span"); inner.className = "inner";
     if(photos[it.id]){
       var img = document.createElement("img");
       img.src = photos[it.id]; img.alt = it.name;
-      chip.appendChild(img);
+      inner.appendChild(img);
     } else {
-      var sp = document.createElement("span");
-      sp.textContent = it.icon;
-      chip.appendChild(sp);
+      inner.textContent = it.icon;
     }
+    chip.appendChild(inner);
     var nm = document.createElement("span");
     nm.className = "nm"; nm.textContent = it.name;
     chip.appendChild(nm);
-    chip.className = "chip" + (entryDue(it).length ? " due" : "");
+    var due = entryDue(it).length > 0;
+    chip.className = "chip" + (due ? " due" : (" closed" + (caredToday(it) ? " done" : "")));
   }
   function refreshChips(){
     ENTRIES.forEach(function(g){ g.items.forEach(function(it){ renderChip(it); }); });
@@ -308,10 +370,10 @@
       chipEls[it.id] = chip;
       chip.addEventListener("click", function(){
         var due = entryDue(it);
-        var targets = due.length ? due : [it.actions[0]];
-        targets.forEach(function(a){
-          store[it.id+"|"+a[0]] = new Date().toISOString();
-          renderLast(it.id, a[0], a[1]);
+        if (!due.length) return;
+        due.forEach(function(pair){
+          store[it.id+"|"+pair[0]] = new Date().toISOString();
+          renderLast(it.id, pair[0], pair[1]);
         });
         save(); renderToday(); renderChip(it);
       });
@@ -320,276 +382,174 @@
     });
   })();
 
-  /* ============ 写真 ============ */
+  /* ============ 写真を選ぶ ============ */
   var picker = document.getElementById("picker");
   var photoTarget = null;
-  var avatarEls = {};
-  function renderAvatar(id){
-    var box = avatarEls[id]; if(!box) return;
-    var it = null;
-    ENTRIES.forEach(function(g){ g.items.forEach(function(x){ if(x.id === id) it = x; }); });
-    box.innerHTML = "";
-    if(photos[id]){
-      var img = document.createElement("img");
-      img.src = photos[id]; img.alt = it ? it.name : "";
-      box.appendChild(img);
-      var del = document.createElement("span");
-      del.className = "del"; del.textContent = "✕";
-      del.addEventListener("click", function(ev){
-        ev.stopPropagation();
-        delete photos[id]; savePhotos(); renderAvatar(id); refreshChips();
-      });
-      box.appendChild(del);
-    } else {
-      var sp = document.createElement("span");
-      sp.textContent = it ? it.icon : "🐾";
-      box.appendChild(sp);
-    }
-    var cam = document.createElement("span");
-    cam.className = "cam"; cam.textContent = "📷";
-    box.appendChild(cam);
-  }
+  function openPicker(id){ photoTarget = id; picker.value = ""; picker.click(); }
   picker.addEventListener("change", function(){
     var file = picker.files && picker.files[0];
-    picker.value = "";
-    if(!file || !photoTarget) return;
+    if (!file || !photoTarget) return;
+    var id = photoTarget;
     var url = URL.createObjectURL(file);
     var img = new Image();
     img.onload = function(){
-      var max = 480, w = img.width, h = img.height;
-      var sc = Math.min(1, max / Math.max(w, h));
-      var cw = Math.round(w * sc), ch = Math.round(h * sc);
-      var c = document.createElement("canvas");
-      c.width = cw; c.height = ch;
-      c.getContext("2d").drawImage(img, 0, 0, cw, ch);
+      var max = 480;
+      var sc = Math.min(1, max / Math.max(img.width, img.height));
+      var cv = document.createElement("canvas");
+      cv.width = Math.round(img.width * sc);
+      cv.height = Math.round(img.height * sc);
+      cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
       URL.revokeObjectURL(url);
-      var data = c.toDataURL("image/jpeg", 0.75);
-      var id = photoTarget;
-      var old = photos[id];
-      photos[id] = data;
-      if(!savePhotos()){
-        if(old) photos[id] = old; else delete photos[id];
-        alert("写真を保存できなかった。端末の空き容量の問題かも。");
-        return;
-      }
+      photos[id] = cv.toDataURL("image/jpeg", 0.75);
+      savePhotos();
       renderAvatar(id); refreshChips();
     };
     img.src = url;
   });
 
-  /* ============ カード ============ */
-  var list = document.getElementById("list");
-  ENTRIES.forEach(function(g){
-    var h = document.createElement("h2"); h.textContent = g.group; list.appendChild(h);
-    g.items.forEach(function(it){
-      var card = document.createElement("div"); card.className = "card";
-      var head = document.createElement("div"); head.className = "head";
-      var av = document.createElement("div"); av.className = "avatar";
-      av.title = "写真を変える";
-      avatarEls[it.id] = av;
-      av.addEventListener("click", function(){
-        photoTarget = it.id; picker.click();
-      });
-      head.appendChild(av);
-      var tx = document.createElement("div");
-      var nm = document.createElement("div"); nm.className = "name"; nm.textContent = it.name; tx.appendChild(nm);
-      if(it.note){ var nt = document.createElement("div"); nt.className = "note"; nt.textContent = it.note; tx.appendChild(nt); }
-      head.appendChild(tx);
-      card.appendChild(head);
-      renderAvatar(it.id);
-      var row = document.createElement("div"); row.className = "row";
-      it.actions.forEach(function(a){
-        var action = a[0], days = a[1];
-        var wrap = document.createElement("div"); wrap.className = "act";
-        var btn = document.createElement("button"); btn.textContent = action;
-        var last = document.createElement("div");
-        lastEls[it.id+"|"+action] = last;
-        btn.addEventListener("click", function(){
-          store[it.id+"|"+action] = new Date().toISOString();
-          save(); renderLast(it.id, action, days); renderToday(); refreshChips();
-          btn.classList.remove("just");
-          void btn.offsetWidth;
-          btn.classList.add("just");
-          setTimeout(function(){ btn.classList.remove("just"); }, 850);
-        });
-        wrap.appendChild(btn); wrap.appendChild(last); row.appendChild(wrap);
-        renderLast(it.id, action, days);
-      });
-      card.appendChild(row);
-      list.appendChild(card);
-    });
-  });
   renderToday();
 
   /* ============ 時計 ============ */
-  (function(){
-    var cv = document.getElementById('face');
-    var ctx = cv.getContext('2d');
-    var W = 760, C = W/2, R = 268;
+  function rnd(seed){
+    var s = seed;
+    return function(){ s = (s * 9301 + 49297) % 233280; return s / 233280; };
+  }
+  var face = document.getElementById("face");
+  var ctx = face.getContext("2d");
+  var CX = 380, CY = 380, R = 268, DR = 346;
+  var trail = [];
 
-    var seed = 718;
-    function rnd(){
-      seed = (seed * 1103515245 + 12345) % 2147483648;
-      return seed / 2147483648;
-    }
-    var wobble = [];
-    for (var i = 0; i < 180; i++) wobble.push((rnd() - 0.5) * 5);
+  function line(a, r1, r2, style, w){
+    ctx.strokeStyle = style; ctx.lineWidth = w; ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(CX + Math.cos(a) * r1, CY + Math.sin(a) * r1);
+    ctx.lineTo(CX + Math.cos(a) * r2, CY + Math.sin(a) * r2);
+    ctx.stroke();
+  }
+  function todayStamps(){
+    var now = new Date(), out = [];
+    Object.keys(store).forEach(function(k){
+      var d = new Date(store[k]);
+      if (sameDay(d, now)) out.push(d);
+    });
+    return out;
+  }
 
-    function rimPath(r){
+  function draw(){
+    var now = new Date();
+    var h = now.getHours(), m = now.getMinutes(), s = now.getSeconds() + now.getMilliseconds() / 1000;
+    ctx.clearRect(0, 0, 760, 760);
+
+    /* ---- 今日の輪（いちばん外） ---- */
+    ctx.strokeStyle = "rgba(163,156,141,0.5)"; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.arc(CX, CY, DR, 0, Math.PI * 2); ctx.stroke();
+    for (var hh = 0; hh < 24; hh++){
+      var ha2 = (hh / 24) * Math.PI * 2 - Math.PI / 2;
+      ctx.fillStyle = "rgba(138,129,114,0.65)";
       ctx.beginPath();
-      for (var i = 0; i <= 180; i++){
-        var a = (i / 180) * Math.PI * 2;
-        var rr = r + wobble[i % 180];
-        var x = C + Math.cos(a) * rr, y = C + Math.sin(a) * rr;
-        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-      }
-      ctx.closePath();
-    }
-    function strokeRim(r, alpha, width, dx, dy){
-      ctx.save();
-      ctx.translate(dx || 0, dy || 0);
-      rimPath(r);
-      ctx.strokeStyle = 'rgba(74,70,64,' + alpha + ')';
-      ctx.lineWidth = width;
-      ctx.stroke();
-      ctx.restore();
-    }
-    function polar(a, r){
-      return [C + Math.cos(a) * r, C + Math.sin(a) * r];
-    }
-    function line(a, r1, r2, color, width){
-      var p1 = polar(a, r1), p2 = polar(a, r2);
-      ctx.beginPath();
-      ctx.moveTo(p1[0], p1[1]);
-      ctx.lineTo(p2[0], p2[1]);
-      ctx.strokeStyle = color;
-      ctx.lineWidth = width;
-      ctx.lineCap = 'round';
-      ctx.stroke();
-    }
-
-    var week = ['日','月','火','水','木','金','土'];
-
-    function draw(){
-      var now = new Date();
-      var h = now.getHours(), m = now.getMinutes(),
-          s = now.getSeconds() + now.getMilliseconds() / 1000;
-
-      ctx.clearRect(0, 0, W, W);
-
-      // 今日の輪（24時間）：お世話をした時刻に印が残る（印にも鉛筆のゆらぎ）
-      var evs = todayEventMinutes();
-      for (var hh = 0; hh < 24; hh++){
-        var ha2 = (hh / 24) * Math.PI * 2 - Math.PI / 2;
-        var hp = polar(ha2, R + 76);
-        ctx.beginPath();
-        ctx.arc(hp[0], hp[1], hh % 6 === 0 ? 4 : 2.6, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(163,156,141,0.65)';
-        ctx.lineWidth = 1.3;
-        ctx.stroke();
-      }
-      var lastMin = -999, stack = 0;
-      for (var e = 0; e < evs.length; e++){
-        if (evs[e] - lastMin <= 12) stack = Math.min(stack + 1, 3); else stack = 0;
-        lastMin = evs[e];
-        var ea = (evs[e] / 1440) * Math.PI * 2 - Math.PI / 2;
-        var ep = polar(ea, R + 76 + stack * 13);
-        var jx = wobble[(evs[e] * 7) % 180] * 0.5, jy = wobble[(evs[e] * 11) % 180] * 0.5;
-        ctx.beginPath();
-        ctx.arc(ep[0] + jx, ep[1] + jy, 6.5, 0, Math.PI * 2);
-        ctx.fillStyle = '#e9a90a';
-        ctx.fill();
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = '#4a4640';
-        ctx.stroke();
-      }
-
-      // 記録リング：この1時間の「分」が、過ぎた分だけ残る
-      for (var i = 0; i < 60; i++){
-        var a = (i / 60) * Math.PI * 2 - Math.PI / 2;
-        var p = polar(a, R + 40);
-        ctx.beginPath();
-        if (i < m){
-          ctx.arc(p[0], p[1], 5, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(74,70,64,0.75)';
-          ctx.fill();
-        } else if (i === m){
-          ctx.arc(p[0], p[1], 7, 0, Math.PI * 2);
-          ctx.fillStyle = '#e9a90a';
-          ctx.fill();
-        } else {
-          ctx.arc(p[0], p[1], 3.2, 0, Math.PI * 2);
-          ctx.strokeStyle = 'rgba(163,156,141,0.8)';
-          ctx.lineWidth = 1.4;
-          ctx.stroke();
-        }
-      }
-
-      // 文字盤（鉛筆で二度なぞり）
-      strokeRim(R, 0.85, 3.2, 0, 0);
-      strokeRim(R, 0.28, 2.0, 1.6, 1.2);
-      strokeRim(R - 16, 0.30, 1.4, 0, 0);
-
-      // 目盛り：分は細く60、時は24時間ぶんを強く
-      for (var t = 0; t < 60; t++){
-        var ta = (t / 60) * Math.PI * 2;
-        line(ta, R - 32, R - 22, 'rgba(163,156,141,0.55)', 2);
-      }
-      for (var th = 0; th < 24; th++){
-        var tha = (th / 24) * Math.PI * 2;
-        line(tha, R - 48, R - 22, 'rgba(74,70,64,0.9)', th % 6 === 0 ? 6 : 4);
-      }
-      // 数字は 0・6・12・18 だけ（24時間）
-      ctx.fillStyle = 'rgba(74,70,64,0.92)';
-      ctx.font = '54px Georgia, "Hiragino Mincho ProN", serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      var nums = [[0, -Math.PI/2], [6, 0], [12, Math.PI/2], [18, Math.PI]];
-      for (var n = 0; n < nums.length; n++){
-        var np = polar(nums[n][1], R - 82);
-        ctx.fillText(String(nums[n][0]), np[0], np[1] + 2);
-      }
-
-      // 針
-      var ha = (h + m / 60) / 24 * Math.PI * 2 - Math.PI / 2;
-      var ma = (m + s / 60) / 60 * Math.PI * 2 - Math.PI / 2;
-      var sa = s / 60 * Math.PI * 2 - Math.PI / 2;
-      line(ha, -26, R * 0.50, '#4a4640', 13);
-      line(ha, -26, R * 0.50, 'rgba(74,70,64,0.35)', 5);
-      line(ma, -30, R * 0.74, '#4a4640', 9);
-      line(ma, -30, R * 0.74, 'rgba(74,70,64,0.35)', 3.4);
-      // 秒針：黄色い鉛筆。後ろに薄い軌跡を残す
-      for (var k = 10; k >= 1; k--){
-        var ta2 = sa - k * 0.022;
-        line(ta2, -44, R * 0.86, 'rgba(233,169,10,' + (0.05 * (11 - k)) + ')', 3.4);
-      }
-      line(sa, -44, R * 0.86, '#e9a90a', 4);
-      // 中心
-      ctx.beginPath();
-      ctx.arc(C, C, 13, 0, Math.PI * 2);
-      ctx.fillStyle = '#e9a90a';
+      ctx.arc(CX + Math.cos(ha2) * DR, CY + Math.sin(ha2) * DR, hh % 6 === 0 ? 3.4 : 2, 0, Math.PI * 2);
       ctx.fill();
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = '#4a4640';
-      ctx.stroke();
-
-      // テキスト
-      function pad(x){ return (x < 10 ? '0' : '') + x; }
-      document.getElementById('digital').textContent =
-        pad(h) + ':' + pad(m) + ':' + pad(Math.floor(s));
-      document.getElementById('date').textContent =
-        now.getFullYear() + '年' + (now.getMonth() + 1) + '月' + now.getDate() +
-        '日（' + week[now.getDay()] + '）';
-      var evCount = evs.length;
-      document.getElementById('record').innerHTML =
-        '今日の記録 — <b>' + h + '時間' + m + '分</b>が、もう残っている。<br>' +
-        '外側の点は、この1時間の記録。過ぎた分だけ、消えずに残る。<br>' +
-        '一番外の輪は今日のお世話。<b>' + evCount + '個</b>の印が残っている。';
-
-      requestAnimationFrame(draw);
     }
+    todayStamps().forEach(function(d, idx){
+      var a = ((d.getHours() + d.getMinutes() / 60) / 24) * Math.PI * 2 - Math.PI / 2;
+      var rr = DR + 13 + Math.floor(idx / 6) * 15;
+      var x = CX + Math.cos(a) * rr, y = CY + Math.sin(a) * rr;
+      ctx.fillStyle = PENCIL;
+      ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "rgba(74,70,64,0.65)"; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.arc(x + 0.8, y - 0.6, 6.8, 0, Math.PI * 2); ctx.stroke();
+    });
+    var na = ((h + m / 60) / 24) * Math.PI * 2 - Math.PI / 2;
+    ctx.fillStyle = PENCIL;
+    ctx.beginPath();
+    ctx.arc(CX + Math.cos(na) * DR, CY + Math.sin(na) * DR, 4.6, 0, Math.PI * 2);
+    ctx.fill();
+
+    /* ---- 紙の顔 ---- */
+    ctx.fillStyle = "#fffdf6";
+    ctx.beginPath(); ctx.arc(CX, CY, R + 14, 0, Math.PI * 2); ctx.fill();
+
+    /* ---- 手描きのゆらぎ円 ---- */
+    var rg = rnd(718);
+    ctx.strokeStyle = "rgba(74,70,64,0.85)"; ctx.lineWidth = 3;
+    ctx.beginPath();
+    for (var i = 0; i <= 90; i++){
+      var a = (i / 90) * Math.PI * 2;
+      var rr2 = R + (rg() - 0.5) * 3.2;
+      var x2 = CX + Math.cos(a) * rr2, y2 = CY + Math.sin(a) * rr2;
+      if (i === 0) ctx.moveTo(x2, y2); else ctx.lineTo(x2, y2);
+    }
+    ctx.closePath(); ctx.stroke();
+
+    /* ---- この1時間の記録（過ぎた分） ---- */
+    for (var t = 0; t < 60; t++){
+      var ta = (t / 60) * Math.PI * 2 - Math.PI / 2;
+      var x3 = CX + Math.cos(ta) * (R + 30), y3 = CY + Math.sin(ta) * (R + 30);
+      if (t < m || (t === Math.floor(m) && false)){
+        ctx.fillStyle = "rgba(74,70,64,0.75)";
+        ctx.beginPath(); ctx.arc(x3, y3, 3.2, 0, Math.PI * 2); ctx.fill();
+      } else if (t === Math.floor(m)){
+        ctx.fillStyle = PENCIL;
+        ctx.beginPath(); ctx.arc(x3, y3, 5.4, 0, Math.PI * 2); ctx.fill();
+      } else {
+        ctx.fillStyle = "rgba(163,156,141,0.4)";
+        ctx.beginPath(); ctx.arc(x3, y3, 2.2, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+
+    /* ---- 目盛り ---- */
+    for (var tm = 0; tm < 60; tm++){
+      var tma = (tm / 60) * Math.PI * 2;
+      line(tma, R - 32, R - 22, "rgba(163,156,141,0.55)", 2);
+    }
+    for (var th = 0; th < 24; th++){
+      var tha = (th / 24) * Math.PI * 2;
+      line(tha, R - 48, R - 22, "rgba(74,70,64,0.9)", th % 6 === 0 ? 6 : 4);
+    }
+
+    /* ---- 数字 0・6・12・18 ---- */
+    ctx.fillStyle = "rgba(74,70,64,0.92)";
+    ctx.font = "54px Georgia, 'Hiragino Mincho ProN', serif";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    var nums = [[0, -Math.PI/2], [6, 0], [12, Math.PI/2], [18, Math.PI]];
+    nums.forEach(function(pair){
+      ctx.fillText(pair[0], CX + Math.cos(pair[1]) * (R - 84), CY + Math.sin(pair[1]) * (R - 84) + 2);
+    });
+
+    /* ---- 秒針の軌跡 ---- */
+    var sa = (s / 60) * Math.PI * 2 - Math.PI / 2;
+    trail.push({x: CX + Math.cos(sa) * (R - 66), y: CY + Math.sin(sa) * (R - 66)});
+    if (trail.length > 26) trail.shift();
+    trail.forEach(function(p, idx){
+      ctx.fillStyle = "rgba(242,183,5," + (0.05 + 0.3 * (idx / trail.length)) + ")";
+      ctx.beginPath(); ctx.arc(p.x, p.y, 3.4, 0, Math.PI * 2); ctx.fill();
+    });
+
+    /* ---- 針 ---- */
+    var hA = (h + m / 60) / 24 * Math.PI * 2 - Math.PI / 2;
+    var mA = ((m + s / 60) / 60) * Math.PI * 2 - Math.PI / 2;
+    line(hA, -26, R - 118, "rgba(74,70,64,0.95)", 13);
+    line(mA, -30, R - 58, "rgba(74,70,64,0.9)", 8);
+    line(sa, -36, R - 52, PENCIL, 4.5);
+    ctx.fillStyle = "#4a463f";
+    ctx.beginPath(); ctx.arc(CX, CY, 11, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = PENCIL;
+    ctx.beginPath(); ctx.arc(CX, CY, 4.6, 0, Math.PI * 2); ctx.fill();
+
+    /* ---- 表示 ---- */
+    document.getElementById("digital").textContent = pad(h) + ":" + pad(m) + ":" + pad(Math.floor(s));
+    var days = ["日","月","火","水","木","金","土"];
+    document.getElementById("dateline").textContent =
+      now.getFullYear() + "年" + (now.getMonth() + 1) + "月" + now.getDate() + "日（" + days[now.getDay()] + "）";
+    var rec = "今日の記録 — <b>" + h + "時間" + m + "分</b>が、もう残っている";
+    var sc = todayStamps().length;
+    if (sc) rec += "。お世話の印 <b>" + sc + "つ</b>";
+    document.getElementById("record").innerHTML = rec;
+
     requestAnimationFrame(draw);
-  })();
+  }
+  requestAnimationFrame(draw);
+})();
 </script>
 </body>
 </html>
