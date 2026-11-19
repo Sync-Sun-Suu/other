@@ -35,6 +35,28 @@
   h1{font-size:15px; font-weight:600; letter-spacing:.35em; margin-bottom:4px}
   .concept{font-size:12px; color:var(--soft); letter-spacing:.12em; margin-bottom:10px}
   canvas{width:min(80vw,384px); height:min(80vw,384px); display:block; margin:0 auto}
+  /* 時計のまわりの「みんな」のチップ */
+  .stage{position:relative; width:min(94vw,448px); margin:0 auto}
+  .stage canvas{width:85.7%; height:auto}
+  .chip{
+    position:absolute; width:43px; height:43px; transform:translate(-50%,-50%);
+    border:2px solid rgba(74,70,64,.72); border-radius:48% 52% 55% 45%/52% 46% 54% 48%;
+    background:var(--card); cursor:pointer; padding:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:22px; font-family:inherit; z-index:2;
+    box-shadow:1.5px 2px 0 rgba(74,70,64,.10);
+  }
+  .chip img{width:100%; height:100%; object-fit:cover; border-radius:48% 52% 55% 45%/52% 46% 54% 48%; display:block}
+  .chip .nm{
+    position:absolute; top:calc(100% + 1px); left:50%; transform:translateX(-50%);
+    font-size:9px; color:var(--soft); white-space:nowrap; letter-spacing:.02em;
+  }
+  .chip.due::after{
+    content:""; position:absolute; inset:-5px;
+    border:2.5px solid var(--pencil); border-radius:255px 18px 225px 18px/18px 225px 18px 255px;
+    transform:rotate(-2deg); pointer-events:none;
+  }
+  .chip:active{transform:translate(-50%,-50%) scale(.93)}
   .digital{
     font-family:Georgia,"Hiragino Mincho ProN","Yu Mincho",serif;
     font-size:32px; letter-spacing:.14em; margin-top:6px; text-align:center;
@@ -128,7 +150,10 @@
   <div class="clock-wrap">
     <h1>記録する時計</h1>
     <p class="concept">測るためじゃなく、残すための時計</p>
-    <canvas id="face" width="760" height="760"></canvas>
+    <div class="stage">
+      <canvas id="face" width="760" height="760"></canvas>
+      <div id="orbit"></div>
+    </div>
     <div class="digital" id="digital">--:--:--</div>
     <div class="date" id="date"></div>
     <div class="record" id="record"></div>
@@ -240,6 +265,61 @@
     }
   }
 
+  /* ============ 時計のまわりのチップ ============ */
+  var chipEls = {};
+  function entryDue(it){
+    var due = [];
+    it.actions.forEach(function(a){
+      var st = statusOf(store[it.id+"|"+a[0]], a[1]);
+      if(st && (st.kind === "due" || st.kind === "over")) due.push(a);
+    });
+    return due;
+  }
+  function renderChip(it){
+    var chip = chipEls[it.id]; if(!chip) return;
+    chip.innerHTML = "";
+    if(photos[it.id]){
+      var img = document.createElement("img");
+      img.src = photos[it.id]; img.alt = it.name;
+      chip.appendChild(img);
+    } else {
+      var sp = document.createElement("span");
+      sp.textContent = it.icon;
+      chip.appendChild(sp);
+    }
+    var nm = document.createElement("span");
+    nm.className = "nm"; nm.textContent = it.name;
+    chip.appendChild(nm);
+    chip.className = "chip" + (entryDue(it).length ? " due" : "");
+  }
+  function refreshChips(){
+    ENTRIES.forEach(function(g){ g.items.forEach(function(it){ renderChip(it); }); });
+  }
+  (function buildChips(){
+    var orbit = document.getElementById("orbit");
+    var flat = [];
+    ENTRIES.forEach(function(g){ g.items.forEach(function(it){ flat.push(it); }); });
+    flat.forEach(function(it, idx){
+      var a = (idx / flat.length) * Math.PI * 2 - Math.PI / 2;
+      var chip = document.createElement("button");
+      chip.style.left = (50 + 47.5 * Math.cos(a)) + "%";
+      chip.style.top  = (50 + 47.5 * Math.sin(a)) + "%";
+      chip.title = it.name;
+      chipEls[it.id] = chip;
+      chip.addEventListener("click", function(){
+        var due = entryDue(it);
+        var targets = due.length ? due : [it.actions[0]];
+        targets.forEach(function(a){
+          store[it.id+"|"+a[0]] = new Date().toISOString();
+          renderLast(it.id, a[0], a[1]);
+        });
+        save(); renderToday(); renderChip(it);
+      });
+      orbit.appendChild(chip);
+      renderChip(it);
+    });
+  })();
+
   /* ============ 写真 ============ */
   var picker = document.getElementById("picker");
   var photoTarget = null;
@@ -257,7 +337,7 @@
       del.className = "del"; del.textContent = "✕";
       del.addEventListener("click", function(ev){
         ev.stopPropagation();
-        delete photos[id]; savePhotos(); renderAvatar(id);
+        delete photos[id]; savePhotos(); renderAvatar(id); refreshChips();
       });
       box.appendChild(del);
     } else {
@@ -292,7 +372,7 @@
         alert("写真を保存できなかった。端末の空き容量の問題かも。");
         return;
       }
-      renderAvatar(id);
+      renderAvatar(id); refreshChips();
     };
     img.src = url;
   });
@@ -326,7 +406,7 @@
         lastEls[it.id+"|"+action] = last;
         btn.addEventListener("click", function(){
           store[it.id+"|"+action] = new Date().toISOString();
-          save(); renderLast(it.id, action, days); renderToday();
+          save(); renderLast(it.id, action, days); renderToday(); refreshChips();
           btn.classList.remove("just");
           void btn.offsetWidth;
           btn.classList.add("just");
