@@ -76,6 +76,12 @@
   .voice{font-size:14.5px; line-height:1.9; color:var(--ink); margin-top:2px; min-height:1.9em}
   .voice b{font-weight:normal; border-bottom:2.5px solid var(--pencil); padding:0 2px}
   .voice .calm{color:var(--soft)}
+  .undo{
+    font-family:inherit; font-size:12.5px; color:var(--soft);
+    background:none; border:none; cursor:pointer; margin-top:6px;
+    text-decoration:underline dotted rgba(138,129,114,.7); text-underline-offset:4px;
+  }
+  .undo:active{color:var(--ink)}
   /* ---- お世話カード ---- */
   .groups{max-width:560px; margin:30px auto 0; text-align:left}
   h2{
@@ -155,6 +161,7 @@
     <div class="rule"></div>
     <div class="record" id="record"></div>
     <div class="voice" id="voice"></div>
+    <button class="undo" id="undoBtn" type="button" style="display:none">↩ さっきの記録をもどす</button>
   </div>
 
   <div class="groups" id="groups"></div>
@@ -173,6 +180,19 @@
   var store = {};
   try { store = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch(e) { store = {}; }
   function save(){ try { localStorage.setItem(KEY, JSON.stringify(store)); } catch(e){} }
+  /* もどす（直前の記録を取り消す。前の値に戻す） */
+  var UKEY = "pets-undo-v1";
+  var undoStack = [];
+  try { undoStack = JSON.parse(localStorage.getItem(UKEY) || "[]"); } catch(e) { undoStack = []; }
+  function saveUndo(){ try { localStorage.setItem(UKEY, JSON.stringify(undoStack)); } catch(e){} }
+  function pushUndo(changes){
+    undoStack.push(changes);
+    if (undoStack.length > 30) undoStack.shift();
+    saveUndo(); renderUndo();
+  }
+  function renderUndo(){
+    document.getElementById("undoBtn").style.display = undoStack.length ? "" : "none";
+  }
   function pad(n){ return (n < 10 ? "0" : "") + n; }
   function sameDay(a, b){ return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
   function fmtDateTime(d){ return (d.getMonth()+1) + "/" + d.getDate() + " " + pad(d.getHours()) + ":" + pad(d.getMinutes()); }
@@ -283,7 +303,9 @@
         var last = document.createElement("span"); last.className = "last";
         lastEls[it.id+"|"+action] = last;
         btn.addEventListener("click", function(){
-          store[it.id+"|"+action] = new Date().toISOString();
+          var k = it.id+"|"+action;
+          pushUndo([{key:k, prev: store[k] || null}]);
+          store[k] = new Date().toISOString();
           save(); renderLast(it.id, action, days); renderToday(); refreshChips();
           btn.classList.remove("marked"); void btn.offsetWidth; btn.classList.add("marked");
           setTimeout(function(){ btn.classList.remove("marked"); }, 700);
@@ -371,6 +393,10 @@
       chip.addEventListener("click", function(){
         var due = entryDue(it);
         if (!due.length) return;
+        var changes = due.map(function(pair){
+          return {key: it.id+"|"+pair[0], prev: store[it.id+"|"+pair[0]] || null};
+        });
+        pushUndo(changes);
         due.forEach(function(pair){
           store[it.id+"|"+pair[0]] = new Date().toISOString();
           renderLast(it.id, pair[0], pair[1]);
@@ -408,6 +434,18 @@
   });
 
   renderToday();
+  renderUndo();
+  document.getElementById("undoBtn").addEventListener("click", function(){
+    var op = undoStack.pop(); if(!op) return;
+    op.forEach(function(ch){
+      if (ch.prev) store[ch.key] = ch.prev; else delete store[ch.key];
+    });
+    saveUndo(); save();
+    ENTRIES.forEach(function(g){ g.items.forEach(function(it){
+      it.actions.forEach(function(a){ renderLast(it.id, a[0], a[1]); });
+    });});
+    renderToday(); refreshChips(); renderUndo();
+  });
 
   /* ============ 時計 ============ */
   function rnd(seed){
